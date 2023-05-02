@@ -15,8 +15,9 @@ const calculateAvailableSlots = (
 
   const availableSlots = [];
 
-  for (let date = startDate; date.isBefore(endDate); date.add(1, "day")) {
+  for (let date = startDate.utc(); date.isBefore(endDate.utc()); date.add(1, "day")) {
     const dayOfWeek = date.day();
+    console.log(dayOfWeek, date)
     const schedule = schedules.find((s) => s.day_of_week === dayOfWeek);
 
     if (!schedule) {
@@ -29,16 +30,23 @@ const calculateAvailableSlots = (
       continue;
     }
 
-    const startTime = moment(schedule.start_time, "HH:mm");
-    const endTime = moment(schedule.end_time, "HH:mm");
+    const startTime = moment(date).set({
+      hour: schedule.start_time.split(":")[0],
+      minute: schedule.start_time.split(":")[1],
+      second: 0,
+      millisecond: 0,
+    });
+  
+    const endTime = moment(date).set({
+      hour: schedule.end_time.split(":")[0],
+      minute: schedule.end_time.split(":")[1],
+      second: 0,
+      millisecond: 0,
+    });
 
     for (
-      let slotTime = moment(date)
-        .add(startTime.hour(), "hour")
-        .add(startTime.minute(), "minute");
-      slotTime.isBefore(
-        date.clone().add(endTime.hour(), "hour").add(endTime.minute(), "minute")
-      );
+      let slotTime = startTime;
+      slotTime.isBefore(endTime);
       slotTime.add(service.slot_duration + service.cleanup_duration, "minutes")
     ) {
       const overlappingAppointments = appointments.filter((app) => {
@@ -66,35 +74,39 @@ exports.getAvailableSlots = async (req, res) => {
     const holidays = await Holiday.findAll();
     const appointments = await Appointment.findAll();
 
-    const servicesWithAvailableSlots = await Promise.all(
-      services.map(async (service) => {
-        const serviceSchedules = schedules.filter(
-          (s) => s.service_id === service.id
-        );
-        const serviceHolidays = holidays.filter(
-          (h) => h.service_id === service.id
-        );
-        const serviceAppointments = appointments.filter(
-          (a) => a.service_id === service.id
-        );
+    const schedulesWithAvailableSlots = schedules.reduce((acc, schedule) => {
+      const service = services.find((s) => s.id === schedule.service_id);
+      const serviceHolidays = holidays.filter(
+        (h) => h.service_id === service.id
+      );
+      const serviceAppointments = appointments.filter(
+        (a) => a.service_id === service.id
+      );
 
-        const availableSlots = calculateAvailableSlots(
-          serviceSchedules,
-          serviceHolidays,
-          serviceAppointments,
-          service
-        );
+      const availableSlots = calculateAvailableSlots(
+        [schedule],
+        serviceHolidays,
+        serviceAppointments,
+        service
+      );
 
-        return {
-          serviceSchedules,
+      if (!acc[schedule.id]) {
+        acc[schedule.id] = {
+          schedule,
           service,
-          availableSlots,
+          availableSlots: [],
+          serviceHolidays,
         };
-      })
-    );
+      }
 
-    res.status(200).json(servicesWithAvailableSlots);
+      acc[schedule.id].availableSlots.push(...availableSlots);
+
+      return acc;
+    }, {});
+
+    res.status(200).json(Object.values(schedulesWithAvailableSlots));
   } catch (error) {
+    console.log(error);
     res.status(500).json({ error: "Error fetching schedule data" });
   }
 };
