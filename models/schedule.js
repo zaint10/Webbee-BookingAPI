@@ -1,20 +1,12 @@
 const { Model } = require('sequelize');
 
 module.exports = (sequelize, DataTypes) => {
-  class Appointment extends Model {}
-  Appointment.init({
+  class Schedule extends Model {}
+  Schedule.init({
     id: {
       type: DataTypes.INTEGER,
       primaryKey: true,
       autoIncrement: true
-    },
-    user_id: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      references: {
-        model: 'users',
-        key: 'id'
-      }
     },
     service_id: {
       type: DataTypes.INTEGER,
@@ -24,17 +16,13 @@ module.exports = (sequelize, DataTypes) => {
         key: 'id'
       }
     },
-    schedule_id: {
+    day_of_week: {
       type: DataTypes.INTEGER,
       allowNull: false,
-      references: {
-        model: 'schedules',
-        key: 'id'
+      validate: {
+        min: 0,
+        max: 6
       }
-    },
-    appointment_date: {
-      type: DataTypes.DATE,
-      allowNull: false
     },
     start_time: {
       type: DataTypes.TIME,
@@ -43,12 +31,25 @@ module.exports = (sequelize, DataTypes) => {
     end_time: {
       type: DataTypes.TIME,
       allowNull: false
+    },
+    is_off: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false
+    },
+    break_start_time: {
+      type: DataTypes.TIME,
+      allowNull: true
+    },
+    break_end_time: {
+      type: DataTypes.TIME,
+      allowNull: true
     }
   }, {
     sequelize,
-    modelName: 'Appointment',
+    modelName: 'schedule',
     timestamps: false
   });
 
-  return Appointment;
+  return Schedule;
 };
