@@ -1,0 +1,19 @@
+{
+  "name": "webbee-bookingapi",
+  "version": "1.0.0",
+  "description": "RESTFul API for booking appointments and schedulling time slots for a business's services.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/zaint10/Webbee-BookingAPI.git"
+  },
+  "author": "Zain Tanveer",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/zaint10/Webbee-BookingAPI/issues"
+  },
+  "homepage": "https://github.com/zaint10/Webbee-BookingAPI#readme"
+}
