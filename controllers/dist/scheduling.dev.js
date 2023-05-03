@@ -110,7 +110,9 @@ exports.getAvailableSlots = function _callee(req, res) {
               start_time: slotStart.format("HH:mm"),
               end_time: slotEnd.format("HH:mm"),
               max_clients: maxClientsPerSlot,
-              available_users: maxClientsPerSlot - appointmentCount
+              available_users: maxClientsPerSlot - appointmentCount,
+              schedule_id: schedule.id,
+              service: service.id
             });
           }
 
@@ -238,10 +240,11 @@ exports.bookAppointment = function _callee4(req, res) {
       switch (_context4.prev = _context4.next) {
         case 0:
           _context4.prev = 0;
-          _req$body = req.body, serviceId = _req$body.serviceId, scheduleId = _req$body.scheduleId, appointmentDate = _req$body.appointmentDate, startTime = _req$body.startTime, endTime = _req$body.endTime, users = _req$body.users; // Validate request body
+          _req$body = req.body, serviceId = _req$body.serviceId, scheduleId = _req$body.scheduleId, appointmentDate = _req$body.appointmentDate, startTime = _req$body.startTime, endTime = _req$body.endTime, users = _req$body.users;
+          console.log('APPPPP'); // Validate request body
 
           if (!(!serviceId || !scheduleId || !appointmentDate || !startTime || !endTime || !users || users.length === 0)) {
-            _context4.next = 4;
+            _context4.next = 5;
             break;
           }
 
@@ -249,15 +252,15 @@ exports.bookAppointment = function _callee4(req, res) {
             message: "All fields are required."
           }));
 
-        case 4:
-          _context4.next = 6;
+        case 5:
+          _context4.next = 7;
           return regeneratorRuntime.awrap(validateRequestedSlot(serviceId, scheduleId, appointmentDate, startTime, endTime));
 
-        case 6:
+        case 7:
           validationError = _context4.sent;
 
           if (!validationError) {
-            _context4.next = 9;
+            _context4.next = 10;
             break;
           }
 
@@ -265,8 +268,8 @@ exports.bookAppointment = function _callee4(req, res) {
             error: validationError
           }));
 
-        case 9:
-          _context4.next = 11;
+        case 10:
+          _context4.next = 12;
           return regeneratorRuntime.awrap(Promise.all(users.map(function _callee2(user) {
             var existingUser;
             return regeneratorRuntime.async(function _callee2$(_context2) {
@@ -305,9 +308,9 @@ exports.bookAppointment = function _callee4(req, res) {
             });
           })));
 
-        case 11:
+        case 12:
           createdUsers = _context4.sent;
-          _context4.next = 14;
+          _context4.next = 15;
           return regeneratorRuntime.awrap(Promise.all(createdUsers.map(function _callee3(user) {
             var appointment;
             return regeneratorRuntime.async(function _callee3$(_context3) {
@@ -336,27 +339,27 @@ exports.bookAppointment = function _callee4(req, res) {
             });
           })));
 
-        case 14:
+        case 15:
           appointments = _context4.sent;
           res.status(201).json({
             message: "Appointment booked successfully!",
             appointments: appointments
           });
-          _context4.next = 22;
+          _context4.next = 23;
           break;
 
-        case 18:
-          _context4.prev = 18;
+        case 19:
+          _context4.prev = 19;
           _context4.t0 = _context4["catch"](0);
           console.log(_context4.t0);
-          return _context4.abrupt("return", res.status(500).json({
-            message: "Failed to book appointment."
+          return _context4.abrupt("return", res.status(404).json({
+            message: _context4.t0.message
           }));
 
-        case 22:
+        case 23:
         case "end":
           return _context4.stop();
       }
     }
-  }, null, null, [[0, 18]]);
+  }, null, null, [[0, 19]]);
 };

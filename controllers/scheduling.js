@@ -68,6 +68,8 @@ exports.getAvailableSlots = async (req, res) => {
               end_time: slotEnd.format("HH:mm"),
               max_clients: maxClientsPerSlot,
               available_users: maxClientsPerSlot - appointmentCount,
+              schedule_id: schedule.id,
+              service: service.id
             });
           }
 
@@ -106,6 +108,8 @@ exports.bookAppointment = async (req, res) => {
       endTime,
       users,
     } = req.body;
+
+    console.log('APPPPP')
 
     // Validate request body
     if (
@@ -164,6 +168,6 @@ exports.bookAppointment = async (req, res) => {
     });
   } catch (error) {
     console.log(error);
-    return res.status(500).json({ message: "Failed to book appointment." });
+    return res.status(404).json({ message: error.message });
   }
 };
