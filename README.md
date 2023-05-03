@@ -42,23 +42,28 @@ Returns a list of available appointment slots for each service for a given date.
         {
           "day_of_week": 0,
           "slots": [
+            "start_datetime": "2023-05-04T08:00:00.000Z",
+            "end_datetime": "2023-05-04T08:15:00.000Z",
+            "max_clients": 3,
+            "available_users": 2,
+            "schedule_id": 2,
+            "service": 1
             {
-              "start_time": "09:00",
-              "end_time": "09:45",
-              "max_clients": 2,
-              "available_users": 1
+              "start_datetime": "2023-05-04T08:15:00.000Z",
+              "end_datetime": "2023-05-04T08:30:00.000Z",
+              "max_clients": 3,
+              "available_users": 3,
+              "schedule_id": 2,
+              "service": 1
             },
             {
-              "start_time": "10:00",
-              "end_time": "10:45",
-              "max_clients": 2,
-              "available_users": 2
-            },
-            {
-              "start_time": "11:00",
-              "end_time": "11:45",
-              "max_clients": 2,
-              "available_users": 0
+              
+              "start_datetime": "2023-05-04T08:30:00.000Z",
+              "end_datetime": "2023-05-04T08:45:00.000Z",
+              "max_clients": 3,
+              "available_users": 3,
+              "schedule_id": 2,
+              "service": 1
             }
           ]
         }
