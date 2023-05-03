@@ -10,6 +10,14 @@ const toLocalTimeString = (date) => {
   return localDate.toISOString().split("T")[1].substring(0, 8);
 };
 
+const toUTCDateTimeString = (date, time) => {
+  const dateTimeString = `${date}T${time}:00.000Z`;
+  const utcDate = new Date(dateTimeString);
+
+  return utcDate.toISOString();
+};
+
+
 
 module.exports = {
   getThirdDayFromNow,

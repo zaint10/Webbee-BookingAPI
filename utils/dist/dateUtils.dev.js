@@ -12,6 +12,12 @@ var toLocalTimeString = function toLocalTimeString(date) {
   return localDate.toISOString().split("T")[1].substring(0, 8);
 };
 
+var toUTCDateTimeString = function toUTCDateTimeString(date, time) {
+  var dateTimeString = "".concat(date, "T").concat(time, ":00.000Z");
+  var utcDate = new Date(dateTimeString);
+  return utcDate.toISOString();
+};
+
 module.exports = {
   getThirdDayFromNow: getThirdDayFromNow,
   toLocalTimeString: toLocalTimeString

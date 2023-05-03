@@ -19,7 +19,7 @@ var _require2 = require("../utils/dateUtils"),
     toLocalTimeString = _require2.toLocalTimeString;
 
 var validateRequestedSlot = function validateRequestedSlot(serviceId, scheduleId, appointmentDate, startTime, endTime) {
-  var schedule, service, today, maxBookingDays, maxBookingDate, requestedDate, startDateTime, endDateTime, workingStartDateTime, workingEndDateTime, breakStartDateTime, breakEndDateTime, startTimeString, endTimeString, existingAppointments, maxClientsPerSlot;
+  var schedule, service, today, maxBookingDays, maxBookingDate, requestedDate, startDateTime, endDateTime, workingStartDateTime, workingEndDateTime, breakStartDateTime, breakEndDateTime, existingAppointments, maxClientsPerSlot;
   return regeneratorRuntime.async(function validateRequestedSlot$(_context) {
     while (1) {
       switch (_context.prev = _context.next) {
@@ -76,45 +76,47 @@ var validateRequestedSlot = function validateRequestedSlot(serviceId, scheduleId
 
         case 16:
           // Check if the requested slot falls within the schedule's working hours
-          startDateTime = new Date("".concat(appointmentDate, " ").concat(startTime));
-          endDateTime = new Date("".concat(appointmentDate, " ").concat(endTime));
-          workingStartDateTime = new Date("".concat(appointmentDate, " ").concat(schedule.start_time));
-          workingEndDateTime = new Date("".concat(appointmentDate, " ").concat(schedule.end_time));
-          breakStartDateTime = new Date("".concat(appointmentDate, " ").concat(schedule.break_start_time));
-          breakEndDateTime = new Date("".concat(appointmentDate, " ").concat(schedule.break_end_time));
+          // const startDateTime = new Date(`${appointmentDate} ${startTime}`);
+          // const endDateTime = new Date(`${appointmentDate} ${endTime}`);
+          startDateTime = new Date("".concat(appointmentDate, "T").concat(startTime, ":00.000Z"));
+          endDateTime = new Date("".concat(appointmentDate, "T").concat(endTime, ":00.000Z"));
+          workingStartDateTime = new Date("".concat(appointmentDate, "T").concat(schedule.start_time, ".000Z"));
+          workingEndDateTime = new Date("".concat(appointmentDate, "T").concat(schedule.end_time, ".000Z"));
+          breakStartDateTime = new Date("".concat(appointmentDate, "T").concat(schedule.break_start_time, ".000Z"));
+          breakEndDateTime = new Date("".concat(appointmentDate, "T").concat(schedule.break_end_time, ".000Z"));
+          console.log(startDateTime, workingStartDateTime, startDateTime < workingStartDateTime);
 
           if (!(startDateTime < workingStartDateTime || endDateTime > workingEndDateTime)) {
-            _context.next = 24;
+            _context.next = 25;
             break;
           }
 
           throw new Error("Requested slot is outside of working hours.");
 
-        case 24:
+        case 25:
           if (!(startDateTime < breakEndDateTime && endDateTime > breakStartDateTime)) {
-            _context.next = 26;
+            _context.next = 27;
             break;
           }
 
           throw new Error("Requested slot is within a break period.");
 
-        case 26:
-          // Convert date-time objects to local time and extract the time portion
-          startTimeString = toLocalTimeString(startDateTime);
-          endTimeString = toLocalTimeString(endDateTime); // Check if the requested slot is available
-
-          _context.next = 30;
+        case 27:
+          _context.next = 29;
           return regeneratorRuntime.awrap(Appointment.findAll({
-            where: {
+            where: _defineProperty({
               schedule_id: scheduleId,
-              appointment_date: moment(appointmentDate),
-              start_time: _defineProperty({}, Op.lt, endTimeString),
-              end_time: _defineProperty({}, Op.gt, startTimeString)
-            }
+              appointment_date: moment(appointmentDate)
+            }, Op.and, [{
+              start_time: _defineProperty({}, Op.lte, startDateTime.toISOString().split('T')[1].substring(0, 8))
+            }, {
+              end_time: _defineProperty({}, Op.gt, startDateTime.toISOString().split('T')[1].substring(0, 8))
+            }])
           }));
 
-        case 30:
+        case 29:
           existingAppointments = _context.sent;
+          console.log(existingAppointments.length);
           maxClientsPerSlot = service.max_clients_per_slot;
 
           if (!(existingAppointments.length >= maxClientsPerSlot)) {

@@ -19,7 +19,7 @@ var _require2 = require("./helper"),
 var moment = require("moment");
 
 exports.getAvailableSlots = function _callee(req, res) {
-  var date, dayOfWeek, services, availableSlots, _iteratorNormalCompletion, _didIteratorError, _iteratorError, _iterator, _step, service, schedules, serviceSlots, _iteratorNormalCompletion2, _didIteratorError2, _iteratorError2, _iterator2, _step2, schedule, start, end, slotDuration, maxClientsPerSlot, cleanupDuration, slots, current, slotStart, slotEnd, appointmentCount;
+  var date, dayOfWeek, services, availableSlots, _iteratorNormalCompletion, _didIteratorError, _iteratorError, _iterator, _step, service, schedules, serviceSlots, _iteratorNormalCompletion2, _didIteratorError2, _iteratorError2, _iterator2, _step2, schedule, start, end, slotDuration, maxClientsPerSlot, cleanupDuration, slots, current, slotStart, slotEnd, appointmentCount, dateTimeString, start_datetime, end_datetime;
 
   return regeneratorRuntime.async(function _callee$(_context) {
     while (1) {
@@ -106,9 +106,13 @@ exports.getAvailableSlots = function _callee(req, res) {
           appointmentCount = _context.sent;
 
           if (appointmentCount < maxClientsPerSlot) {
+            dateTimeString = "".concat(date, "T").concat(slotStart.format("HH:mm"), ":00.000Z");
+            start_datetime = new Date(dateTimeString).toISOString();
+            dateTimeString = "".concat(date, "T").concat(slotEnd.format("HH:mm"), ":00.000Z");
+            end_datetime = new Date(dateTimeString).toISOString();
             slots.push({
-              start_time: slotStart.format("HH:mm"),
-              end_time: slotEnd.format("HH:mm"),
+              start_datetime: start_datetime,
+              end_datetime: end_datetime,
               max_clients: maxClientsPerSlot,
               available_users: maxClientsPerSlot - appointmentCount,
               schedule_id: schedule.id,
@@ -240,11 +244,10 @@ exports.bookAppointment = function _callee4(req, res) {
       switch (_context4.prev = _context4.next) {
         case 0:
           _context4.prev = 0;
-          _req$body = req.body, serviceId = _req$body.serviceId, scheduleId = _req$body.scheduleId, appointmentDate = _req$body.appointmentDate, startTime = _req$body.startTime, endTime = _req$body.endTime, users = _req$body.users;
-          console.log('APPPPP'); // Validate request body
+          _req$body = req.body, serviceId = _req$body.serviceId, scheduleId = _req$body.scheduleId, appointmentDate = _req$body.appointmentDate, startTime = _req$body.startTime, endTime = _req$body.endTime, users = _req$body.users; // Validate request body
 
           if (!(!serviceId || !scheduleId || !appointmentDate || !startTime || !endTime || !users || users.length === 0)) {
-            _context4.next = 5;
+            _context4.next = 4;
             break;
           }
 
@@ -252,15 +255,15 @@ exports.bookAppointment = function _callee4(req, res) {
             message: "All fields are required."
           }));
 
-        case 5:
-          _context4.next = 7;
+        case 4:
+          _context4.next = 6;
           return regeneratorRuntime.awrap(validateRequestedSlot(serviceId, scheduleId, appointmentDate, startTime, endTime));
 
-        case 7:
+        case 6:
           validationError = _context4.sent;
 
           if (!validationError) {
-            _context4.next = 10;
+            _context4.next = 9;
             break;
           }
 
@@ -268,8 +271,8 @@ exports.bookAppointment = function _callee4(req, res) {
             error: validationError
           }));
 
-        case 10:
-          _context4.next = 12;
+        case 9:
+          _context4.next = 11;
           return regeneratorRuntime.awrap(Promise.all(users.map(function _callee2(user) {
             var existingUser;
             return regeneratorRuntime.async(function _callee2$(_context2) {
@@ -308,9 +311,9 @@ exports.bookAppointment = function _callee4(req, res) {
             });
           })));
 
-        case 12:
+        case 11:
           createdUsers = _context4.sent;
-          _context4.next = 15;
+          _context4.next = 14;
           return regeneratorRuntime.awrap(Promise.all(createdUsers.map(function _callee3(user) {
             var appointment;
             return regeneratorRuntime.async(function _callee3$(_context3) {
@@ -339,27 +342,27 @@ exports.bookAppointment = function _callee4(req, res) {
             });
           })));
 
-        case 15:
+        case 14:
           appointments = _context4.sent;
           res.status(201).json({
             message: "Appointment booked successfully!",
             appointments: appointments
           });
-          _context4.next = 23;
+          _context4.next = 22;
           break;
 
-        case 19:
-          _context4.prev = 19;
+        case 18:
+          _context4.prev = 18;
           _context4.t0 = _context4["catch"](0);
           console.log(_context4.t0);
           return _context4.abrupt("return", res.status(404).json({
             message: _context4.t0.message
           }));
 
-        case 23:
+        case 22:
         case "end":
           return _context4.stop();
       }
     }
-  }, null, null, [[0, 19]]);
+  }, null, null, [[0, 18]]);
 };

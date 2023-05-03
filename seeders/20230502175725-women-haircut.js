@@ -7,10 +7,7 @@ const { User, Service, Schedule, Appointment, Holiday } = require("../models");
 module.exports = {
   up: async (queryInterface, Sequelize) => {
     const now = new Date();
-    const thirdDay = moment
-      .tz("Asia/Karachi")
-      .add(2, "day")
-      .format("YYYY-MM-DD");
+    const thirdDay = moment().add(2, "day").format("YYYY-MM-DD");
 
     // Create Women's Haircut service
     const menHaircut = await Service.create({
@@ -22,10 +19,9 @@ module.exports = {
 
     // Create Women's Haircut schedules
     // Define the schedules for the next 7 days, excluding Sunday
-    const today = moment.tz("Asia/Karachi");
     const schedules = [];
     for (let i = 0; i < 7; i++) {
-      const date = today.clone().add(i, "day");
+      const date = moment().add(i, "day");
       if (date.day() === 0) {
         // Skip Sunday
         continue;

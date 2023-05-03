@@ -41,22 +41,28 @@ const validateRequestedSlot = async (
   }
 
   // Check if the requested slot falls within the schedule's working hours
-  const startDateTime = new Date(`${appointmentDate} ${startTime}`);
-  const endDateTime = new Date(`${appointmentDate} ${endTime}`);
+  // const startDateTime = new Date(`${appointmentDate} ${startTime}`);
+  // const endDateTime = new Date(`${appointmentDate} ${endTime}`);
+
+  const startDateTime = new Date(`${appointmentDate}T${startTime}:00.000Z`);
+  const endDateTime = new Date(`${appointmentDate}T${endTime}:00.000Z`);
 
   const workingStartDateTime = new Date(
-    `${appointmentDate} ${schedule.start_time}`
+    `${appointmentDate}T${schedule.start_time}.000Z`
   );
   const workingEndDateTime = new Date(
-    `${appointmentDate} ${schedule.end_time}`
+    `${appointmentDate}T${schedule.end_time}.000Z`
   );
 
   const breakStartDateTime = new Date(
-    `${appointmentDate} ${schedule.break_start_time}`
+    `${appointmentDate}T${schedule.break_start_time}.000Z`
   );
   const breakEndDateTime = new Date(
-    `${appointmentDate} ${schedule.break_end_time}`
+    `${appointmentDate}T${schedule.break_end_time}.000Z`
   );
+
+  console.log(startDateTime, workingStartDateTime, startDateTime < workingStartDateTime)
+
   if (
     startDateTime < workingStartDateTime ||
     endDateTime > workingEndDateTime
@@ -70,22 +76,27 @@ const validateRequestedSlot = async (
   }
 
   // Convert date-time objects to local time and extract the time portion
-  const startTimeString = toLocalTimeString(startDateTime);
-  const endTimeString = toLocalTimeString(endDateTime);
 
   // Check if the requested slot is available
   const existingAppointments = await Appointment.findAll({
     where: {
       schedule_id: scheduleId,
       appointment_date: moment(appointmentDate),
-      start_time: {
-        [Op.lt]: endTimeString,
-      },
-      end_time: {
-        [Op.gt]: startTimeString,
-      },
+      [Op.and]: [
+        {
+          start_time: {
+            [Op.lte]: startDateTime.toISOString().split('T')[1].substring(0, 8),
+          },
+        },
+        {
+          end_time: {
+            [Op.gt]: startDateTime.toISOString().split('T')[1].substring(0, 8),
+          },
+        },
+      ],
     },
   });
+  console.log(existingAppointments.length)
   const maxClientsPerSlot = service.max_clients_per_slot;
   if (existingAppointments.length >= maxClientsPerSlot) {
     throw new Error("Requested slot is fully booked.");

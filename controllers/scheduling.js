@@ -63,13 +63,17 @@ exports.getAvailableSlots = async (req, res) => {
           });
 
           if (appointmentCount < maxClientsPerSlot) {
+            let dateTimeString = `${date}T${slotStart.format("HH:mm")}:00.000Z`;
+            const start_datetime = new Date(dateTimeString).toISOString();
+            dateTimeString = `${date}T${slotEnd.format("HH:mm")}:00.000Z`;
+            const end_datetime = new Date(dateTimeString).toISOString();
             slots.push({
-              start_time: slotStart.format("HH:mm"),
-              end_time: slotEnd.format("HH:mm"),
+              start_datetime: start_datetime,
+              end_datetime: end_datetime,
               max_clients: maxClientsPerSlot,
               available_users: maxClientsPerSlot - appointmentCount,
               schedule_id: schedule.id,
-              service: service.id
+              service: service.id,
             });
           }
 
@@ -108,8 +112,6 @@ exports.bookAppointment = async (req, res) => {
       endTime,
       users,
     } = req.body;
-
-    console.log('APPPPP')
 
     // Validate request body
     if (
