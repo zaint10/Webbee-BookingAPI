@@ -1,13 +1,17 @@
 "use strict";
 
-const moment = require("moment");
+const moment = require("moment-timezone");
+
 const { User, Service, Schedule, Appointment, Holiday } = require("../models");
 
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   up: async (queryInterface, Sequelize) => {
     const now = new Date();
-    const thirdDay = moment(now).add(3, "days").toDate();
+    const thirdDay = moment
+      .tz("Asia/Karachi")
+      .add(2, "day")
+      .format("YYYY-MM-DD");
 
     // Create Men's Haircut service
     const menHaircut = await Service.create({
@@ -18,25 +22,40 @@ module.exports = {
     });
 
     // Create Men's Haircut schedules
-    const daysOfWeek = [
-      { day: 1, start: "08:00", end: "20:00" },
-      { day: 2, start: "08:00", end: "20:00" },
-      { day: 3, start: "08:00", end: "20:00" },
-      { day: 4, start: "08:00", end: "20:00" },
-      { day: 5, start: "08:00", end: "20:00" },
-      { day: 6, start: "10:00", end: "22:00" },
-    ];
 
-    const schedules = daysOfWeek.map((day) => ({
-      service_id: menHaircut.id,
-      day_of_week: day.day,
-      start_time: day.start,
-      end_time: day.end,
-      break_start_time: "12:00",
-      break_end_time: "13:00",
-      cleaning_break_start_time: "15:00",
-      cleaning_break_end_time: "16:00",
-    }));
+    // Define the schedules for the next 7 days, excluding Sunday
+    const today = moment.tz("Asia/Karachi");
+    const schedules = [];
+    for (let i = 0; i < 7; i++) {
+      const date = today.clone().add(i, "day");
+      if (date.day() === 0) {
+        // Skip Sunday
+        continue;
+      }
+      const isHoliday = i === 2;
+      if (date.day() === 6) {
+        // Saturday schedule
+        schedules.push({
+          service_id: menHaircut.id,
+          day_of_week: date.day(),
+          start_time: "10:00",
+          end_time: "22:00",
+          is_off: isHoliday,
+          break_start_time: "15:00",
+          break_end_time: "16:00",
+        });
+      } else {
+        schedules.push({
+          service_id: menHaircut.id,
+          day_of_week: date.day(),
+          start_time: "08:00",
+          end_time: "20:00",
+          is_off: isHoliday,
+          break_start_time: "12:00",
+          break_end_time: "13:00",
+        });
+      }
+    }
 
     await Schedule.bulkCreate(schedules);
 
@@ -50,9 +69,17 @@ module.exports = {
   },
 
   down: async (queryInterface, Sequelize) => {
-    await Holiday.destroy({ truncate: true });
-    await Schedule.destroy({ truncate: true });
-    await Service.destroy({ truncate: true });
-    await Appointment.destroy({ truncate: true });
+
+    // Delete the schedules and holidays for the Men Haircut service
+    const serviceId = (
+      await queryInterface.sequelize.query(
+        `SELECT id FROM services WHERE name = 'Men Haircut'`,
+        { type: Sequelize.QueryTypes.SELECT }
+      )
+    )[0].id;
+    // Delete the Men Haircut service
+    await queryInterface.bulkDelete("services", { name: "Men Haircut" }, {});
+    await queryInterface.bulkDelete("schedules", { service_id: serviceId });
+    await queryInterface.bulkDelete("holidays", { service_id: serviceId });
   },
 };
