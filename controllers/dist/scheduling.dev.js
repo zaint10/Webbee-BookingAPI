@@ -5,14 +5,16 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
 var db = require("../models");
 
 var _require = require("sequelize"),
-    Op = _require.Op,
-    fn = _require.fn;
+    Op = _require.Op;
 
 var User = db.User,
     Service = db.Service,
     Schedule = db.Schedule,
     Holiday = db.Holiday,
     Appointment = db.Appointment;
+
+var _require2 = require("./helper"),
+    validateRequestedSlot = _require2.validateRequestedSlot;
 
 var moment = require("moment");
 
@@ -228,169 +230,50 @@ exports.getAvailableSlots = function _callee(req, res) {
   }, null, null, [[0, 82], [10, 67, 71, 79], [21, 49, 53, 61], [54,, 56, 60], [72,, 74, 78]]);
 };
 
-var toLocalTimeString = function toLocalTimeString(date) {
-  var localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
-  return localDate.toISOString().split("T")[1].substring(0, 8);
-};
-
-var validateRequestedSlot = function validateRequestedSlot(serviceId, scheduleId, appointmentDate, startTime, endTime) {
-  var schedule, service, today, maxBookingDays, maxBookingDate, requestedDate, startDateTime, endDateTime, workingStartDateTime, workingEndDateTime, breakStartDateTime, breakEndDateTime, startTimeString, endTimeString, existingAppointments, maxClientsPerSlot;
-  return regeneratorRuntime.async(function validateRequestedSlot$(_context2) {
-    while (1) {
-      switch (_context2.prev = _context2.next) {
-        case 0:
-          _context2.next = 2;
-          return regeneratorRuntime.awrap(Schedule.findOne({
-            where: {
-              id: scheduleId
-            }
-          }));
-
-        case 2:
-          schedule = _context2.sent;
-
-          if (schedule) {
-            _context2.next = 5;
-            break;
-          }
-
-          throw new Error("Invalid schedule ID");
-
-        case 5:
-          _context2.next = 7;
-          return regeneratorRuntime.awrap(Service.findOne({
-            where: {
-              id: serviceId
-            }
-          }));
-
-        case 7:
-          service = _context2.sent;
-
-          if (service) {
-            _context2.next = 10;
-            break;
-          }
-
-          throw new Error("Invalid service ID");
-
-        case 10:
-          // Check if the appointment date is valid
-          today = new Date();
-          maxBookingDays = 7; // configurable number of days
-
-          maxBookingDate = new Date(today.getTime() + maxBookingDays * 24 * 60 * 60 * 1000);
-          requestedDate = new Date(appointmentDate);
-
-          if (!(requestedDate.getDate() < today.getDate() || requestedDate > maxBookingDate)) {
-            _context2.next = 16;
-            break;
-          }
-
-          throw new Error("Invalid appointment date. You can only book up to ".concat(maxBookingDays, " days in advance."));
-
-        case 16:
-          // Check if the requested slot falls within the schedule's working hours
-          startDateTime = new Date("".concat(appointmentDate, " ").concat(startTime));
-          endDateTime = new Date("".concat(appointmentDate, " ").concat(endTime));
-          workingStartDateTime = new Date("".concat(appointmentDate, " ").concat(schedule.start_time));
-          workingEndDateTime = new Date("".concat(appointmentDate, " ").concat(schedule.end_time));
-          breakStartDateTime = new Date("".concat(appointmentDate, " ").concat(schedule.break_start_time));
-          breakEndDateTime = new Date("".concat(appointmentDate, " ").concat(schedule.break_end_time));
-
-          if (!(startDateTime < workingStartDateTime || endDateTime > workingEndDateTime)) {
-            _context2.next = 24;
-            break;
-          }
-
-          throw new Error("Requested slot is outside of working hours.");
-
-        case 24:
-          if (!(startDateTime < breakEndDateTime && endDateTime > breakStartDateTime)) {
-            _context2.next = 26;
-            break;
-          }
-
-          throw new Error("Requested slot is within a break period.");
-
-        case 26:
-          // Convert date-time objects to local time and extract the time portion
-          startTimeString = toLocalTimeString(startDateTime);
-          endTimeString = toLocalTimeString(endDateTime); // Check if the requested slot is available
-
-          _context2.next = 30;
-          return regeneratorRuntime.awrap(Appointment.findAll({
-            where: {
-              schedule_id: scheduleId,
-              appointment_date: moment(appointmentDate),
-              start_time: _defineProperty({}, Op.lt, endTimeString),
-              end_time: _defineProperty({}, Op.gt, startTimeString)
-            }
-          }));
-
-        case 30:
-          existingAppointments = _context2.sent;
-          maxClientsPerSlot = service.max_clients_per_slot;
-
-          if (!(existingAppointments.length >= maxClientsPerSlot)) {
-            _context2.next = 34;
-            break;
-          }
-
-          throw new Error("Requested slot is fully booked.");
-
-        case 34:
-        case "end":
-          return _context2.stop();
-      }
-    }
-  });
-};
-
 exports.bookAppointment = function _callee4(req, res) {
   var _req$body, serviceId, scheduleId, appointmentDate, startTime, endTime, users, validationError, createdUsers, appointments;
 
-  return regeneratorRuntime.async(function _callee4$(_context5) {
+  return regeneratorRuntime.async(function _callee4$(_context4) {
     while (1) {
-      switch (_context5.prev = _context5.next) {
+      switch (_context4.prev = _context4.next) {
         case 0:
-          _context5.prev = 0;
+          _context4.prev = 0;
           _req$body = req.body, serviceId = _req$body.serviceId, scheduleId = _req$body.scheduleId, appointmentDate = _req$body.appointmentDate, startTime = _req$body.startTime, endTime = _req$body.endTime, users = _req$body.users; // Validate request body
 
           if (!(!serviceId || !scheduleId || !appointmentDate || !startTime || !endTime || !users || users.length === 0)) {
-            _context5.next = 4;
+            _context4.next = 4;
             break;
           }
 
-          return _context5.abrupt("return", res.status(400).json({
+          return _context4.abrupt("return", res.status(400).json({
             message: "All fields are required."
           }));
 
         case 4:
-          _context5.next = 6;
+          _context4.next = 6;
           return regeneratorRuntime.awrap(validateRequestedSlot(serviceId, scheduleId, appointmentDate, startTime, endTime));
 
         case 6:
-          validationError = _context5.sent;
+          validationError = _context4.sent;
 
           if (!validationError) {
-            _context5.next = 9;
+            _context4.next = 9;
             break;
           }
 
-          return _context5.abrupt("return", res.status(400).json({
+          return _context4.abrupt("return", res.status(400).json({
             error: validationError
           }));
 
         case 9:
-          _context5.next = 11;
+          _context4.next = 11;
           return regeneratorRuntime.awrap(Promise.all(users.map(function _callee2(user) {
             var existingUser;
-            return regeneratorRuntime.async(function _callee2$(_context3) {
+            return regeneratorRuntime.async(function _callee2$(_context2) {
               while (1) {
-                switch (_context3.prev = _context3.next) {
+                switch (_context2.prev = _context2.next) {
                   case 0:
-                    _context3.next = 2;
+                    _context2.next = 2;
                     return regeneratorRuntime.awrap(User.findOne({
                       where: {
                         email: user.email
@@ -398,40 +281,40 @@ exports.bookAppointment = function _callee4(req, res) {
                     }));
 
                   case 2:
-                    existingUser = _context3.sent;
+                    existingUser = _context2.sent;
 
                     if (existingUser) {
-                      _context3.next = 7;
+                      _context2.next = 7;
                       break;
                     }
 
-                    _context3.next = 6;
+                    _context2.next = 6;
                     return regeneratorRuntime.awrap(User.create(user));
 
                   case 6:
-                    existingUser = _context3.sent;
+                    existingUser = _context2.sent;
 
                   case 7:
-                    return _context3.abrupt("return", existingUser);
+                    return _context2.abrupt("return", existingUser);
 
                   case 8:
                   case "end":
-                    return _context3.stop();
+                    return _context2.stop();
                 }
               }
             });
           })));
 
         case 11:
-          createdUsers = _context5.sent;
-          _context5.next = 14;
+          createdUsers = _context4.sent;
+          _context4.next = 14;
           return regeneratorRuntime.awrap(Promise.all(createdUsers.map(function _callee3(user) {
             var appointment;
-            return regeneratorRuntime.async(function _callee3$(_context4) {
+            return regeneratorRuntime.async(function _callee3$(_context3) {
               while (1) {
-                switch (_context4.prev = _context4.next) {
+                switch (_context3.prev = _context3.next) {
                   case 0:
-                    _context4.next = 2;
+                    _context3.next = 2;
                     return regeneratorRuntime.awrap(Appointment.create({
                       service_id: serviceId,
                       user_id: user.id,
@@ -442,37 +325,37 @@ exports.bookAppointment = function _callee4(req, res) {
                     }));
 
                   case 2:
-                    appointment = _context4.sent;
-                    return _context4.abrupt("return", appointment);
+                    appointment = _context3.sent;
+                    return _context3.abrupt("return", appointment);
 
                   case 4:
                   case "end":
-                    return _context4.stop();
+                    return _context3.stop();
                 }
               }
             });
           })));
 
         case 14:
-          appointments = _context5.sent;
+          appointments = _context4.sent;
           res.status(201).json({
             message: "Appointment booked successfully!",
             appointments: appointments
           });
-          _context5.next = 22;
+          _context4.next = 22;
           break;
 
         case 18:
-          _context5.prev = 18;
-          _context5.t0 = _context5["catch"](0);
-          console.log(_context5.t0);
-          return _context5.abrupt("return", res.status(500).json({
+          _context4.prev = 18;
+          _context4.t0 = _context4["catch"](0);
+          console.log(_context4.t0);
+          return _context4.abrupt("return", res.status(500).json({
             message: "Failed to book appointment."
           }));
 
         case 22:
         case "end":
-          return _context5.stop();
+          return _context4.stop();
       }
     }
   }, null, null, [[0, 18]]);
