@@ -2,96 +2,35 @@ const db = require("../models");
 const { Op } = require("sequelize");
 
 const { User, Service, Schedule, Holiday, Appointment } = db;
-const { validateRequestedSlot } = require("./helper");
+const {
+  validateRequestedSlot,
+  validateDateString,
+  generateAvailableSlotsForService,
+  isSlotValid,
+} = require("./helper");
 const moment = require("moment");
 
 exports.getAvailableSlots = async (req, res) => {
   try {
     // Retrieve date from query parameter
     const date = req.query.date || moment().format("YYYY-MM-DD");
-    const dayOfWeek = moment(date).day();
+
+    // Validate the date string
+    if (!validateDateString(date)) {
+      return res
+        .status(400)
+        .json({ error: "Invalid date. Please use the format YYYY-MM-DD." });
+    }
 
     // Retrieve all services
     const services = await Service.findAll();
 
     // Generate list of available slots for each service
-    const availableSlots = [];
-
-    for (const service of services) {
-      const schedules = await Schedule.findAll({
-        where: {
-          service_id: service.id,
-          day_of_week: dayOfWeek,
-          is_off: false,
-        },
-      });
-
-      const serviceSlots = [];
-
-      for (const schedule of schedules) {
-        const start = moment(schedule.start_time, "HH:mm");
-        const end = moment(schedule.end_time, "HH:mm");
-        const slotDuration = moment.duration(service.slot_duration, "minutes");
-        const maxClientsPerSlot = service.max_clients_per_slot;
-        const cleanupDuration = moment.duration(
-          service.cleanup_duration,
-          "minutes"
-        );
-        const slots = [];
-
-        let current = start.clone();
-
-        while (current.isBefore(end)) {
-          const slotStart = current.clone();
-          const slotEnd = slotStart
-            .clone()
-            .add(slotDuration)
-            .add(cleanupDuration);
-          const appointmentCount = await Appointment.count({
-            where: {
-              service_id: service.id,
-              schedule_id: schedule.id,
-              appointment_date: {
-                [Op.between]: [
-                  moment(date).startOf("day").format("YYYY-MM-DD HH:mm:ss"),
-                  moment(date).endOf("day").format("YYYY-MM-DD HH:mm:ss"),
-                ],
-              },
-              start_time: slotStart.format("HH:mm:ss"),
-              end_time: slotEnd.format("HH:mm:ss"),
-            },
-          });
-
-          if (appointmentCount < maxClientsPerSlot) {
-            let dateTimeString = `${date}T${slotStart.format("HH:mm")}:00.000Z`;
-            const start_datetime = new Date(dateTimeString).toISOString();
-            dateTimeString = `${date}T${slotEnd.format("HH:mm")}:00.000Z`;
-            const end_datetime = new Date(dateTimeString).toISOString();
-            slots.push({
-              start_datetime: start_datetime,
-              end_datetime: end_datetime,
-              max_clients: maxClientsPerSlot,
-              available_users: maxClientsPerSlot - appointmentCount,
-              schedule_id: schedule.id,
-              service: service.id,
-            });
-          }
-
-          current.add(slotDuration);
-          current.add(cleanupDuration);
-        }
-
-        serviceSlots.push({
-          day_of_week: schedule.day_of_week,
-          slots: slots,
-        });
-      }
-
-      availableSlots.push({
-        service_name: service.name,
-        slots: serviceSlots,
-      });
-    }
+    const availableSlots = await Promise.all(
+      services.map(async (service) => {
+        return await generateAvailableSlotsForService(service, date);
+      })
+    );
 
     return res.json({
       available_slots: availableSlots,
@@ -103,6 +42,7 @@ exports.getAvailableSlots = async (req, res) => {
 };
 
 exports.bookAppointment = async (req, res) => {
+  const transaction = await db.sequelize.transaction();
   try {
     const {
       serviceId,
@@ -126,16 +66,26 @@ exports.bookAppointment = async (req, res) => {
       return res.status(400).json({ message: "All fields are required." });
     }
 
-    const validationError = await validateRequestedSlot(
+    const startDateTime = new Date(`${appointmentDate}T${startTime}:00.000Z`);
+    const endDateTime = new Date(`${appointmentDate}T${endTime}:00.000Z`);
+
+    const {validationError, service, schedule } = await validateRequestedSlot(
       serviceId,
       scheduleId,
       appointmentDate,
-      startTime,
-      endTime
+      startDateTime,
+      endDateTime
     );
 
     if (validationError) {
       return res.status(400).json({ error: validationError });
+    }
+
+    // Check if the requested slot is valid
+    if (!isSlotValid(service, schedule, startDateTime, endDateTime)) {
+      throw new Error(
+        "Invalid slot. The provided slot does not align with the service's slot configuration."
+      );
     }
 
     // Check if users already exist in database, create them if not
@@ -152,24 +102,28 @@ exports.bookAppointment = async (req, res) => {
     // Create appointments for the users
     const appointments = await Promise.all(
       createdUsers.map(async (user) => {
-        const appointment = await Appointment.create({
-          service_id: serviceId,
-          user_id: user.id,
-          schedule_id: scheduleId,
-          appointment_date: appointmentDate,
-          start_time: startTime,
-          end_time: endTime,
-        });
+        const appointment = await Appointment.create(
+          {
+            service_id: serviceId,
+            user_id: user.id,
+            schedule_id: scheduleId,
+            appointment_date: appointmentDate,
+            start_time: startTime,
+            end_time: endTime,
+          },
+          { transaction }
+        );
         return appointment;
       })
     );
-
+    await transaction.commit();
     res.status(201).json({
       message: "Appointment booked successfully!",
       appointments,
     });
   } catch (error) {
     console.log(error);
+    await transaction.rollback();
     return res.status(404).json({ message: error.message });
   }
 };
