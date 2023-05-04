@@ -173,31 +173,15 @@ const isSlotValid = (service, schedule, startDateTime, endDateTime) => {
   const startTime = moment(startDateTime);
   const endTime = moment(endDateTime);
 
-  const slotDuration = moment.duration(service.slot_duration, "minutes").asMilliseconds();
-  const cleanupDuration = moment.duration(service.cleanup_duration, "minutes").asMilliseconds();
+  const slotDuration = moment
+    .duration(service.slot_duration, "minutes")
+    .asMilliseconds();
+  const cleanupDuration = moment
+    .duration(service.cleanup_duration, "minutes")
+    .asMilliseconds();
   const timeDifference = endTime.diff(startTime);
 
-  if (timeDifference !== slotDuration + cleanupDuration) {
-    return false;
-  }
-
-  const start = moment(schedule.start_time, "HH:mm");
-  const end = moment(schedule.end_time, "HH:mm");
-
-  let current = start.clone();
-
-  while (current.isBefore(end)) {
-    const slotStart = current.clone();
-    const slotEnd = slotStart.clone().add(slotDuration + cleanupDuration, "milliseconds");
-
-    if (startTime.isSame(slotStart) && endTime.isSame(slotEnd)) {
-      return true;
-    }
-
-    current.add(slotDuration + cleanupDuration, "milliseconds");
-  }
-
-  return false;
+  return timeDifference === slotDuration + cleanupDuration;
 };
 
 const generateAvailableSlotsForService = async (service, date) => {

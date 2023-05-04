@@ -7,12 +7,12 @@ describe("API tests", () => {
   let server;
 
   beforeAll(async () => {
-    await db.sequelize.sync();
+    // await db.sequelize.sync({force: true});
   });
 
   afterAll(async () => {
     // Close the server and database connections
-    await db.sequelize.close();
+    // await db.sequelize.close();
   });
 
   describe("GET /api/scheduling/available-slots", () => {
@@ -50,22 +50,38 @@ describe("API tests", () => {
 
     });
 
+    beforeEach(async () => {
+      // Create a schedule for each test case
+      schedule = await db.Schedule.create({
+        service_id: service.id,
+        day_of_week: moment().day(),
+        start_time: "10:00",
+        end_time: "18:00",
+        break_start_time: "12:00:00",
+        break_end_time: "13:00:00",
+      });
+    });
+  
+    afterEach(async () => {
+      // Clean up the test data after each test case
+      await db.Appointment.destroy({ where: {} });
+      await db.Schedule.destroy({ where: {} });
+      await db.User.destroy({ where: {} });
+    });
+
     afterAll(async () => {
-      // Clean up the test data
-      // await db.Appointment.destroy({ where: {} });
-      // await db.Schedule.destroy({ where: {} });
-      // await db.Service.destroy({ where: {} });
-      // await db.User.destroy({ where: {} });
+      // Clean up the test data after all tests are done
+      await db.Service.destroy({ where: {} });
     });
   
 
     it("should book an appointment with valid request body", async () => {
       const requestBody = {
-        serviceId: 1,
-        scheduleId: 1,
+        serviceId: service.id,
+        scheduleId: schedule.id,
         appointmentDate: "2023-05-05",
         startTime: "10:00",
-        endTime: "10:15",
+        endTime: "10:40",
         users: [
           {
             first_name: "John",
@@ -77,6 +93,8 @@ describe("API tests", () => {
       const response = await request(app)
         .post("/api/scheduling/book-appointment")
         .send(requestBody);
+        console.log('requestBody', requestBody)
+      console.log('response', response.body)
       expect(response.statusCode).toBe(201);
       expect(response.body.appointments).toBeDefined();
       expect(response.body.appointments.length).toBeGreaterThan(0);
