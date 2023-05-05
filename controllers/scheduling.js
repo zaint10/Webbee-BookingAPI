@@ -66,6 +66,21 @@ exports.bookAppointment = async (req, res) => {
       return res.status(400).json({ message: "All fields are required." });
     }
 
+    // Validate the date string
+    if (!validateDateString(appointmentDate)) {
+      return res
+        .status(400)
+        .json({ error: "Invalid date. Please use the format YYYY-MM-DD." });
+    }
+
+    // Validate startTime and endTime format
+    const timeFormatRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/;
+    if (!timeFormatRegex.test(startTime) || !timeFormatRegex.test(endTime)) {
+      throw new Error(
+        "Invalid start or end time format. Please use the format HH:mm."
+      );
+    }
+
     const startDateTime = new Date(`${appointmentDate}T${startTime}:00.000Z`);
     const endDateTime = new Date(`${appointmentDate}T${endTime}:00.000Z`);
 
