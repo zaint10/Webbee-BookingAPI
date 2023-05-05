@@ -37,8 +37,10 @@ describe("API tests", () => {
   });
 
   describe("POST /api/scheduling/book-appointment", () => {
-    let service, schedule, user;
+    let service, schedule, user, holiday;
     let date = moment().format("YYYY-MM-DD");
+    const holidayDate = moment().add(2, "day").format("YYYY-MM-DD");
+    const sundayDate = moment().day(0).format('YYYY-MM-DD'); // get next Sunday
 
     beforeAll(async () => {
       // Create a service, schedule and user
@@ -79,6 +81,7 @@ describe("API tests", () => {
     afterAll(async () => {
       // Clean up the test data after all tests are done
       await db.Service.destroy({ where: {} });
+      // await db.Holiday.destroy({ where: {} });
     });
 
     it("should book an appointment with valid request body", async () => {
@@ -220,5 +223,72 @@ describe("API tests", () => {
       expect(response.statusCode).toBe(400);
       expect(response.body.message).toBe("Invalid appointment date. You can only book up to 7 days in advance.");
     });
+
+    it("Booking appointment on off day or public holiday should fail", async () => {
+      holiday = await db.Holiday.create({
+        date: holidayDate,
+        start_time: "00:00",
+        end_time: "23:59",
+        service_id: service.id
+      });
+
+      date = moment(holiday.date).format("YYYY-MM-DD");
+      const startTime = "10:00";
+      const endTime = "10:40";
+  
+      const res = await request(app)
+        .post("/api/scheduling/book-appointment")
+        .send({
+          serviceId: service.id,
+          scheduleId: schedule.id,
+          appointmentDate: date,
+          startTime,
+          endTime,
+          users: [
+            {
+              first_name: "Jane",
+              last_name: "Doe",
+              email: "janedoe@example.com",
+            },
+          ],
+        });
+  
+      expect(res.statusCode).toBe(400);
+      expect(res.body.message).toBe("Appointment date falls on a public holiday or the business is clossed off.");
+    });
+
+    it("Booking appointment on off day or on Sunday should fail", async () => {
+      holiday = await db.Holiday.create({
+        date: sundayDate,
+        start_time: "00:00",
+        end_time: "23:59",
+        service_id: service.id
+      });
+      
+      date = moment(holiday.date).format("YYYY-MM-DD");
+      const startTime = "10:00";
+      const endTime = "10:40";
+  
+      const res = await request(app)
+        .post("/api/scheduling/book-appointment")
+        .send({
+          serviceId: service.id,
+          scheduleId: schedule.id,
+          appointmentDate: date,
+          startTime,
+          endTime,
+          users: [
+            {
+              first_name: "Jane",
+              last_name: "Doe",
+              email: "janedoe@example.com",
+            },
+          ],
+        });
+  
+      expect(res.statusCode).toBe(400);
+      expect(res.body.message).toBe("Appointment date falls on a public holiday or the business is clossed off.");
+    });
+
   });
 });

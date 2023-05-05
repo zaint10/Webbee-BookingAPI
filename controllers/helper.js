@@ -14,15 +14,29 @@ const validateRequestedSlot = async (
 ) => {
   const validationError = undefined;
 
+  const service = await Service.findOne({ where: { id: serviceId } });
+  if (!service) {
+    throw new Error("Invalid service ID");
+  }
+
+  // Check if the appointment date is a public holiday or buisness is closed off
+  const isHoliday = await Holiday.findOne({
+    where: {
+      service_id: service.id,
+      date: {
+        [Op.eq]: db.sequelize.fn("DATE", appointmentDate),
+      },
+    },
+  });
+
+  if (isHoliday) {
+    throw new Error("Appointment date falls on a public holiday or the business is clossed off.");
+  }
+
   // Check if the schedule exists
   const schedule = await Schedule.findOne({ where: { id: scheduleId } });
   if (!schedule) {
     throw new Error("Invalid schedule ID");
-  }
-
-  const service = await Service.findOne({ where: { id: serviceId } });
-  if (!service) {
-    throw new Error("Invalid service ID");
   }
 
   // Check if the appointment date is valid
