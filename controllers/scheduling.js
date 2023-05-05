@@ -102,18 +102,43 @@ exports.bookAppointment = async (req, res) => {
     // Create appointments for the users
     const appointments = await Promise.all(
       createdUsers.map(async (user) => {
-        const appointment = await Appointment.create(
-          {
-            service_id: serviceId,
+        const existingAppointment = await Appointment.findOne({
+          where: {
             user_id: user.id,
-            schedule_id: scheduleId,
-            appointment_date: appointmentDate,
-            start_time: startTime,
-            end_time: endTime,
+            appointment_date: {
+              [Op.eq]: db.sequelize.fn("DATE", appointmentDate),
+            },
+            [Op.and]: [
+              {
+                start_time: {
+                  [Op.eq]: startTime,
+                },
+              },
+              {
+                end_time: {
+                  [Op.eq]: endTime,
+                },
+              },
+            ],
           },
-          { transaction }
-        );
-        return appointment;
+        });
+        
+        if (!existingAppointment) {
+          const appointment = await Appointment.create(
+            {
+              service_id: serviceId,
+              user_id: user.id,
+              schedule_id: scheduleId,
+              appointment_date: appointmentDate,
+              start_time: startTime,
+              end_time: endTime,
+            },
+            { transaction }
+          );
+          return appointment;
+        }else {
+          return {[user.email]: "Appointment exists for this user." }
+        }
       })
     );
     await transaction.commit();
