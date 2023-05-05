@@ -34,8 +34,8 @@ const validateRequestedSlot = async (
   const requestedDate = new Date(appointmentDate);
 
   if (
-    requestedDate.getDate() < today.getDate() ||
-    requestedDate > maxBookingDate
+    moment(requestedDate).isBefore(moment(today), "day") ||
+    moment(requestedDate).isAfter(moment(maxBookingDate), "day")
   ) {
     throw new Error(
       `Invalid appointment date. You can only book up to ${maxBookingDays} days in advance.`

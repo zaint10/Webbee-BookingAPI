@@ -131,7 +131,7 @@ describe("API tests", () => {
           ],
         });
 
-      expect(response.statusCode).toBe(404);
+      expect(response.statusCode).toBe(400);
       expect(response.body).toHaveProperty("message");
       expect(response.body.message).toBe(
         "Requested slot is outside of working hours."
@@ -169,7 +169,7 @@ describe("API tests", () => {
           ],
         });
 
-      expect(response.status).toEqual(404);
+      expect(response.status).toEqual(400);
       expect(response.body.message).toBe("Requested slot is fully booked.");
     });
 
@@ -192,7 +192,7 @@ describe("API tests", () => {
           ],
         });
 
-      expect(response.statusCode).toBe(404);
+      expect(response.statusCode).toBe(400);
       expect(response.body.message).toBe(
         "Invalid appointment date. You can only book up to 7 days in advance."
       );
@@ -217,7 +217,7 @@ describe("API tests", () => {
           ],
         });
 
-      expect(response.statusCode).toBe(404);
+      expect(response.statusCode).toBe(400);
       expect(response.body.message).toBe("Invalid appointment date. You can only book up to 7 days in advance.");
     });
   });

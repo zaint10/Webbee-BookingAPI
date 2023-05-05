@@ -93,7 +93,7 @@ exports.bookAppointment = async (req, res) => {
       users.map(async (user) => {
         let existingUser = await User.findOne({ where: { email: user.email } });
         if (!existingUser) {
-          existingUser = await User.create(user);
+          existingUser = await User.create(user, { transaction });
         }
         return existingUser;
       })
@@ -124,6 +124,6 @@ exports.bookAppointment = async (req, res) => {
   } catch (error) {
     console.log(error);
     await transaction.rollback();
-    return res.status(404).json({ message: error.message });
+    return res.status(400).json({ message: error.message });
   }
 };
