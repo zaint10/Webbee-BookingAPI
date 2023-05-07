@@ -1,9 +1,10 @@
 const express = require("express");
 const router = express.Router();
-const schedulingController = require("../controllers/scheduling");
+const bookingController = require("../controllers/scheduling");
+const availableSlotController = require("../controllers/available-slots");
 
 // Define the routes
-router.get("/available-slots", schedulingController.getAvailableSlots);
-router.post("/book-appointment", schedulingController.bookAppointment);
+router.get("/available-slots", availableSlotController.getAvailableSlots);
+router.post("/book-appointment", bookingController.bookAppointment);
 
 module.exports = router;

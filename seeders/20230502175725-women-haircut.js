@@ -22,11 +22,11 @@ module.exports = {
     const schedules = [];
     for (let i = 0; i < 7; i++) {
       const date = moment().add(i, "day");
-      if (date.day() === 0) {
-        // Skip Sunday
-        continue;
-      }
-      const isHoliday = i === 2;
+      // if (date.day() === 0) {
+      //   // Skip Sunday
+      //   continue;
+      // }
+      const isHoliday = i === 3;
       if (date.day() === 6) {
         // Saturday schedule
         schedules.push({
@@ -34,9 +34,9 @@ module.exports = {
           day_of_week: date.day(),
           start_time: "10:00",
           end_time: "22:00",
-          is_off: isHoliday,
-          break_start_time: "15:00",
-          break_end_time: "16:00",
+          is_off: false,
+          break_start_time: "12:00",
+          break_end_time: "13:00",
         });
       } else {
         schedules.push({
@@ -44,9 +44,11 @@ module.exports = {
           day_of_week: date.day(),
           start_time: "08:00",
           end_time: "20:00",
-          is_off: isHoliday,
+          is_off: date.day() === 0, // Sunday is off
           break_start_time: "12:00",
           break_end_time: "13:00",
+          cleaning_start_time: "15:00",
+          cleaning_end_time: "16:00",
         });
       }
     }

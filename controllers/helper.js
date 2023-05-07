@@ -10,7 +10,8 @@ const validateRequestedSlot = async (
   scheduleId,
   appointmentDate,
   startDateTime,
-  endDateTime
+  endDateTime,
+  users
 ) => {
   const validationError = undefined;
 
@@ -30,13 +31,17 @@ const validateRequestedSlot = async (
   });
 
   if (isHoliday) {
-    throw new Error("Appointment date falls on a public holiday or the business is clossed off.");
+    throw new Error("Appointment date falls on a public holiday");
   }
 
   // Check if the schedule exists
   const schedule = await Schedule.findOne({ where: { id: scheduleId } });
   if (!schedule) {
     throw new Error("Invalid schedule ID");
+  }
+
+  if (schedule.is_off) {
+    throw new Error("Business is clossed off.");
   }
 
   // Check if the appointment date is valid
@@ -163,6 +168,11 @@ const validateRequestedSlot = async (
   if (existingAppointments.length >= maxClientsPerSlot) {
     throw new Error("Requested slot is fully booked.");
   }
+
+  if (users.length >= maxClientsPerSlot) {
+    throw new Error("Users cannot be greater than allowed user per slot.");
+  }
+
   
   return { validationError, service, schedule };
 };
@@ -195,7 +205,7 @@ const isSlotValid = (service, schedule, startDateTime, endDateTime) => {
     .asMilliseconds();
   const timeDifference = endTime.diff(startTime);
 
-  return timeDifference === slotDuration + cleanupDuration;
+  return timeDifference === slotDuration;
 };
 
 const generateAvailableSlotsForService = async (service, date) => {
@@ -204,7 +214,6 @@ const generateAvailableSlotsForService = async (service, date) => {
     where: {
       service_id: service.id,
       day_of_week: dayOfWeek,
-      is_off: false,
     },
   });
 
@@ -225,45 +234,66 @@ const generateAvailableSlotsForService = async (service, date) => {
 
     while (current.isBefore(end)) {
       const slotStart = current.clone();
-      const slotEnd = slotStart.clone().add(slotDuration).add(cleanupDuration);
-      const appointmentCount = await Appointment.count({
+      const slotEnd = slotStart.clone().add(slotDuration);
+
+      // Check if the slot is not a break, is not off, and is not a holiday
+      const isBreak = current.isSameOrAfter(
+        moment(schedule.break_start_time, "HH:mm")
+      ) && current.isBefore(moment(schedule.break_end_time, "HH:mm"));
+
+      const isOff = schedule.is_off;
+      
+      const isHoliday = await Holiday.findOne({
         where: {
           service_id: service.id,
-          schedule_id: schedule.id,
-          appointment_date: {
-            [Op.between]: [
-              moment(date).startOf("day").format("YYYY-MM-DD HH:mm:ss"),
-              moment(date).endOf("day").format("YYYY-MM-DD HH:mm:ss"),
-            ],
+          date: {
+            [Op.eq]: db.sequelize.fn("DATE", date),
           },
-          start_time: slotStart.format("HH:mm:ss"),
-          end_time: slotEnd.format("HH:mm:ss"),
         },
       });
 
-      if (appointmentCount < maxClientsPerSlot) {
-        let dateTimeString = `${date}T${slotStart.format("HH:mm")}:00.000Z`;
-        const start_datetime = new Date(dateTimeString).toISOString();
-        dateTimeString = `${date}T${slotEnd.format("HH:mm")}:00.000Z`;
-        const end_datetime = new Date(dateTimeString).toISOString();
-        slots.push({
-          start_datetime: start_datetime,
-          end_datetime: end_datetime,
-          max_clients: maxClientsPerSlot,
-          available_users: maxClientsPerSlot - appointmentCount,
-          schedule_id: schedule.id,
-          service: service.id,
+      if (!isBreak && !isOff && !isHoliday) {
+        const appointmentCount = await Appointment.count({
+          where: {
+            service_id: service.id,
+            schedule_id: schedule.id,
+            appointment_date: {
+              [Op.between]: [
+                moment(date).startOf("day").format("YYYY-MM-DD HH:mm:ss"),
+                moment(date).endOf("day").format("YYYY-MM-DD HH:mm:ss"),
+              ],
+            },
+            start_time: slotStart.format("HH:mm:ss"),
+            end_time: slotEnd.format("HH:mm:ss"),
+          },
         });
+
+        if (appointmentCount < maxClientsPerSlot) {
+          let dateTimeString = `${date}T${slotStart.format("HH:mm")}:00.000Z`;
+          const start_datetime = new Date(dateTimeString).toISOString();
+          dateTimeString = `${date}T${slotEnd.format("HH:mm")}:00.000Z`;
+          const end_datetime = new Date(dateTimeString).toISOString();
+          slots.push({
+            start_datetime: start_datetime,
+            end_datetime: end_datetime,
+            max_clients: maxClientsPerSlot,
+            available_users: maxClientsPerSlot - appointmentCount,
+            schedule_id: schedule.id,
+            service: service.id,
+          });
+        }
       }
 
       current.add(slotDuration);
       current.add(cleanupDuration);
     }
 
-    serviceSlots.push({
-      day_of_week: schedule.day_of_week,
-      slots: slots,
-    });
+    if (slots.length > 0) {
+      serviceSlots.push({
+        day_of_week: schedule.day_of_week,
+        slots: slots,
+      });
+    }
   }
 
   return {
@@ -271,6 +301,7 @@ const generateAvailableSlotsForService = async (service, date) => {
     slots: serviceSlots,
   };
 };
+
 
 module.exports = {
   validateRequestedSlot,

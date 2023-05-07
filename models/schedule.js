@@ -44,6 +44,14 @@ module.exports = (sequelize, DataTypes) => {
     break_end_time: {
       type: DataTypes.TIME,
       allowNull: true
+    },
+    cleaning_start_time: {
+      type: DataTypes.TIME,
+      allowNull: true
+    },
+    cleaning_end_time: {
+      type: DataTypes.TIME,
+      allowNull: true
     }
   }, {
     sequelize,

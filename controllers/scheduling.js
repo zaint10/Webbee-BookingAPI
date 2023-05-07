@@ -5,41 +5,9 @@ const { User, Service, Schedule, Holiday, Appointment } = db;
 const {
   validateRequestedSlot,
   validateDateString,
-  generateAvailableSlotsForService,
   isSlotValid,
 } = require("./helper");
 const moment = require("moment");
-
-exports.getAvailableSlots = async (req, res) => {
-  try {
-    // Retrieve date from query parameter
-    const date = req.query.date || moment().format("YYYY-MM-DD");
-
-    // Validate the date string
-    if (!validateDateString(date)) {
-      return res
-        .status(400)
-        .json({ error: "Invalid date. Please use the format YYYY-MM-DD." });
-    }
-
-    // Retrieve all services
-    const services = await Service.findAll();
-
-    // Generate list of available slots for each service
-    const availableSlots = await Promise.all(
-      services.map(async (service) => {
-        return await generateAvailableSlotsForService(service, date);
-      })
-    );
-
-    return res.json({
-      available_slots: availableSlots,
-    });
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({ error: "Error fetching schedule data" });
-  }
-};
 
 exports.bookAppointment = async (req, res) => {
   const transaction = await db.sequelize.transaction();
@@ -89,7 +57,8 @@ exports.bookAppointment = async (req, res) => {
       scheduleId,
       appointmentDate,
       startDateTime,
-      endDateTime
+      endDateTime,
+      users
     );
 
     if (validationError) {
